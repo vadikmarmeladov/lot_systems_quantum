@@ -55,7 +55,7 @@ const transporter = nodemailer.createTransporter({
 service: 'gmail',
 auth: {
 user: 'lot.systems.quantum@gmail.com',
-pass: process.env.EMAIL_APP_PASSWORD // Your Gmail app password
+pass: process.env.zene nalc fjeq yerw // Your Gmail app password
 },
 pool: true,
 maxConnections: 5,

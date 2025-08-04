@@ -55,7 +55,7 @@ const transporter = nodemailer.createTransporter({
 service: 'gmail',
 auth: {
 user: 'lot.systems.quantum@gmail.com',
-pass: process.env.zene nalc fjeq yerw // Your Gmail app password
+pass: process.env.zenenalcfjeqyerw // Your Gmail app password
 },
 pool: true,
 maxConnections: 5,
@@ -162,7 +162,7 @@ html: `
 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
 <h2>LOT Systems Quantum - Login Link</h2>
 <p>Click the link below to log into your account:</p>
-<a href="${magicLink}" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+<a href="${magicLink}" style="background: #00000; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
 Login to Your Account
 </a>
 <p style="margin-top: 20px; color: #666; font-size: 14px;">

@@ -1,190 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LOT Systems Quantum - Magic Link Login</title>
-<style>
-* {
-margin: 0;
-padding: 0;
-box-sizing: border-box;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Link Login - LOT Systems Quantum</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-body {
-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-min-height: 100vh;
-display: flex;
-align-items: center;
-justify-content: center;
-padding: 20px;
-}
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
 
-.container {
-background: white;
-border-radius: 10px;
-box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-padding: 40px;
-width: 100%;
-max-width: 400px;
-}
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+        }
 
-h1 {
-text-align: center;
-margin-bottom: 30px;
-color: #333;
-font-size: 28px;
-}
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
 
-.form-group {
-margin-bottom: 20px;
-}
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 500;
+        }
 
-label {
-display: block;
-margin-bottom: 8px;
-color: #555;
-font-weight: 500;
-}
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
 
-input[type="email"] {
-width: 100%;
-padding: 12px 16px;
-border: 2px solid #e1e1e1;
-border-radius: 6px;
-font-size: 16px;
-transition: border-color 0.3s ease;
-}
+        input[type="email"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
 
-input[type="email"]:focus {
-outline: none;
-border-color: #667eea;
-}
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
 
-button {
-width: 100%;
-padding: 12px;
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-color: white;
-border: none;
-border-radius: 6px;
-font-size: 16px;
-font-weight: 600;
-cursor: pointer;
-transition: transform 0.2s ease;
-}
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
 
-button:hover {
-transform: translateY(-2px);
-}
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
 
-button:disabled {
-opacity: 0.6;
-cursor: not-allowed;
-transform: none;
-}
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
 
-.message {
-margin-top: 20px;
-padding: 15px;
-border-radius: 6px;
-text-align: center;
-}
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
 
-.success {
-background-color: #d4edda;
-color: #155724;
-border: 1px solid #c3e6cb;
-}
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
 
-.error {
-background-color: #f8d7da;
-color: #721c24;
-border: 1px solid #f5c6cb;
-}
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            margin-top: 30px;
+            text-align: left;
+        }
 
-.magic-link {
-margin-top: 10px;
-word-break: break-all;
-font-size: 12px;
-color: #666;
-}
+        .direct-link {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            word-break: break-all;
+            font-size: 12px;
+        }
 
-.magic-link a {
-color: #667eea;
-text-decoration: none;
-}
+        .direct-link a {
+            color: #667eea;
+            text-decoration: none;
+        }
 
-.magic-link a:hover {
-text-decoration: underline;
-}
-</style>
+        .loading {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-<div class="container">
-<h1>Magic Link Login</h1>
-<form id="magicLinkForm">
-<div class="form-group">
-<label for="email">Email Address</label>
-<input type="email" id="email" name="email" required>
-</div>
-<button type="submit" id="submitBtn">Send Magic Link</button>
-</form>
-<div id="message"></div>
-</div>
+    <div class="container">
+        <h1>Magic Link Login</h1>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" value="info@vadikmarmeladovlab.com" required>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">
+                Send Magic Link
+            </button>
+            
+            <div class="loading" id="loading">Sending email...</div>
+        </form>
 
-<script>
-document.getElementById('magicLinkForm').addEventListener('submit', async (e) => {
-e.preventDefault();
+        <div id="message"></div>
 
-const email = document.getElementById('email').value;
-const submitBtn = document.getElementById('submitBtn');
-const messageDiv = document.getElementById('message');
+        <div class="info">
+            <strong>Email not configured. Use this link to login:</strong>
+            <div>Direct link: <a href="#" id="directLink">Click here to login</a></div>
+        </div>
+    </div>
 
-// Disable button and show loading
-submitBtn.disabled = true;
-submitBtn.textContent = 'Sending...';
-messageDiv.innerHTML = '';
+    <script>
+        const form = document.getElementById('loginForm');
+        const messageDiv = document.getElementById('message');
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+        const directLink = document.getElementById('directLink');
 
-try {
-const response = await fetch('/send-magic-link', {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-},
-body: JSON.stringify({ email })
-});
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            
+            if (!email) {
+                showMessage('Please enter your email address', 'error');
+                return;
+            }
 
-const data = await response.json();
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            messageDiv.innerHTML = '';
 
-if (response.ok) {
-messageDiv.innerHTML = `
-<div class="message success">
-${data.message}
-${data.magicLink ? `<div class="magic-link">Direct link: <a href="${data.magicLink}" target="_blank">Click here to login</a></div>` : ''}
-</div>
-`;
-} else {
-messageDiv.innerHTML = `
-<div class="message error">
-${data.error || 'An error occurred'}
-</div>
-`;
-}
-} catch (error) {
-console.error('Error:', error);
-messageDiv.innerHTML = `
-<div class="message error">
-Network error. Please try again.
-</div>
-`;
-} finally {
-// Re-enable button
-submitBtn.disabled = false;
-submitBtn.textContent = 'Send Magic Link';
-}
-});
-</script>
+            try {
+                const response = await fetch('/send-magic-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(data.message || 'Magic link sent successfully!', 'success');
+                    
+                    // Show direct link for testing (remove in production)
+                    if (data.directLink) {
+                        directLink.href = data.directLink;
+                        directLink.textContent = 'Click here to login directly';
+                    }
+                } else {
+                    showMessage(data.error || 'Failed to send magic link', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Network error. Please try again.', 'error');
+            } finally {
+                // Hide loading state
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        function showMessage(text, type) {
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+        }
+    </script>
 </body>
 </html>

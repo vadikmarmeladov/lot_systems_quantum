@@ -1,0 +1,24 @@
+[0;1;32m●[0m nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (]8;;file://ubuntu-lot-systems/usr/lib/systemd/system/nginx.service\/usr/lib/systemd/system/nginx.service]8;;\; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Sun 2025-08-03 00:21:10 UTC; 16h ago
+ Invocation: a5646fe681e54ca9bdc37c391259c542
+       Docs: ]8;;man:nginx(8)\man:nginx(8)]8;;\
+    Process: 18564 ExecReload=/usr/sbin/nginx -g daemon on; master_process on; -s reload (code=exited, status=0/SUCCESS)
+   Main PID: 9176 (nginx)
+      Tasks: 2[0;38;5;245m (limit: 1102)[0m
+     Memory: 2M (peak: 3.5M)
+        CPU: 72ms
+     CGroup: /system.slice/nginx.service
+             ├─[0;38;5;245m 9176 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"[0m
+             └─[0;38;5;245m18566 "nginx: worker process"[0m
+
+Aug 03 15:52:42 ubuntu-lot-systems nginx[18298]: 2025/08/03 15:52:42 [emerg] 18298#18298: unknown directive "    listen" in /etc/nginx/sites-enabled/lot_systems_quantum:2
+Aug 03 15:52:42 ubuntu-lot-systems systemd[1]: [0;1;39m[0;1;31m[0;1;39mnginx.service: Control process exited, code=exited, status=1/FAILURE[0m
+Aug 03 15:52:42 ubuntu-lot-systems systemd[1]: [0;1;31m[0;1;39m[0;1;31mReload failed for nginx.service - A high performance web server and a reverse proxy server.[0m
+Aug 03 16:04:15 ubuntu-lot-systems systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+Aug 03 16:04:15 ubuntu-lot-systems nginx[18450]: 2025/08/03 16:04:15 [emerg] 18450#18450: unknown directive "root@104.248.6.236" in /etc/nginx/sites-enabled/lot_systems_quantum:3
+Aug 03 16:04:15 ubuntu-lot-systems systemd[1]: [0;1;39m[0;1;31m[0;1;39mnginx.service: Control process exited, code=exited, status=1/FAILURE[0m
+Aug 03 16:04:15 ubuntu-lot-systems systemd[1]: [0;1;31m[0;1;39m[0;1;31mReload failed for nginx.service - A high performance web server and a reverse proxy server.[0m
+Aug 03 16:16:50 ubuntu-lot-systems systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+Aug 03 16:16:50 ubuntu-lot-systems nginx[18564]: 2025/08/03 16:16:50 [notice] 18564#18564: signal process started
+Aug 03 16:16:50 ubuntu-lot-systems systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.

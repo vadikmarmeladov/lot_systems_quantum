@@ -1,18 +1,16 @@
-// Updated server.js - Replace your email configuration with this
-
 require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const crypto = require('crypto');
 const session = require('express-session');
 const path = require('path');
-
-// Replace nodemailer with Resend
 const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Middleware
 app.use(express.json());
@@ -24,13 +22,13 @@ app.use(session({
     secret: crypto.randomBytes(32).toString('hex'),
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 // Initialize SQLite database
 const db = new sqlite3.Database('./users.db');
 
-// Create users table if it doesn't exist
+// Create tables
 db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
@@ -39,7 +37,6 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`);
 
-// Create magic_links table for tracking
 db.run(`CREATE TABLE IF NOT EXISTS magic_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT NOT NULL,
@@ -52,172 +49,99 @@ db.run(`CREATE TABLE IF NOT EXISTS magic_links (
 console.log('Server running on port', PORT);
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Connected to SQLite database.');
-console.log('Users table created or already exists.');
+console.log('Resend API Key:', process.env.RESEND_API_KEY ? 'Configured ✅' : 'Missing ❌');
 
-// Email sending function using Resend
+// Email function using Resend
 async function sendMagicLinkEmail(email, magicLink) {
     try {
-        console.log('Attempting to send magic link email to:', email);
+        console.log('📧 Sending magic link email to:', email);
         
         const data = await resend.emails.send({
             from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
             to: [email],
-            subject: 'Your Secure Login Link - IoT Systems Quantum',
+            subject: 'Your Login Link - IoT Systems Quantum',
             html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>IoT Systems Quantum - Login Link</title>
-                </head>
-                <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: system-ui, -apple-system, sans-serif;">
-                    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; margin-top: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">IoT Systems Quantum</h1>
+                        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0;">Secure Dashboard Access</p>
+                    </div>
+                    
+                    <div style="padding: 40px 30px;">
+                        <h2 style="color: #1f2937; margin: 0 0 20px 0;">Your Login Link is Ready</h2>
+                        <p style="color: #4b5563; line-height: 1.6; margin: 0 0 30px 0;">
+                            Click the button below to securely access your dashboard. This link expires in 15 minutes.
+                        </p>
                         
-                        <!-- Header -->
-                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-                            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 600;">
-                                IoT Systems Quantum
-                            </h1>
-                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 16px;">
-                                Secure Dashboard Access
-                            </p>
+                        <div style="text-align: center; margin: 35px 0;">
+                            <a href="${magicLink}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">
+                                Access Dashboard →
+                            </a>
                         </div>
                         
-                        <!-- Content -->
-                        <div style="padding: 40px 30px;">
-                            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px;">
-                                Your Login Link is Ready
-                            </h2>
-                            
-                            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                                Click the button below to securely access your IoT Systems Quantum dashboard. This link is valid for 15 minutes.
-                            </p>
-                            
-                            <!-- CTA Button -->
-                            <div style="text-align: center; margin: 35px 0;">
-                                <a href="${magicLink}" 
-                                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                          color: white; 
-                                          padding: 16px 32px; 
-                                          text-decoration: none; 
-                                          border-radius: 8px; 
-                                          font-weight: 600; 
-                                          font-size: 16px;
-                                          display: inline-block;
-                                          box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.39);">
-                                    Access Dashboard →
-                                </a>
-                            </div>
-                            
-                            <!-- Alternative link -->
-                            <div style="background-color: #f9fafb; padding: 20px; border-radius: 6px; margin: 30px 0;">
-                                <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
-                                    Or copy and paste this link:
-                                </p>
-                                <code style="background: #e5e7eb; padding: 8px 12px; border-radius: 4px; font-size: 13px; word-break: break-all; display: block; color: #374151;">
-                                    ${magicLink}
-                                </code>
-                            </div>
-                        </div>
-                        
-                        <!-- Footer -->
-                        <div style="background-color: #f8fafc; padding: 30px; border-top: 1px solid #e5e7eb;">
-                            <div style="text-align: center;">
-                                <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">
-                                    🔒 This link expires in 15 minutes for your security<br>
-                                    If you didn't request this login, please ignore this email
-                                </p>
-                            </div>
+                        <div style="background: #f9fafb; padding: 20px; border-radius: 6px;">
+                            <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">Or copy this link:</p>
+                            <code style="background: #e5e7eb; padding: 8px; border-radius: 4px; font-size: 13px; word-break: break-all; display: block;">${magicLink}</code>
                         </div>
                     </div>
                     
-                    <!-- Footer note -->
-                    <div style="text-align: center; margin: 30px 0;">
+                    <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
                         <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                            IoT Systems Quantum Dashboard
+                            🔒 Expires in 15 minutes • If you didn't request this, ignore this email
                         </p>
                     </div>
-                </body>
-                </html>
+                </div>
             `,
-            text: `
-IoT Systems Quantum - Secure Login
-
-Click this link to access your dashboard:
-${magicLink}
-
-This link expires in 15 minutes for security.
-
-If you didn't request this login, please ignore this email.
-            `
+            text: `IoT Systems Quantum - Login Link\n\nClick this link: ${magicLink}\n\nExpires in 15 minutes.`
         });
 
-        console.log('✅ Email sent successfully via Resend');
-        console.log('📧 Email ID:', data.id);
-        console.log('📬 Sent to:', email);
-        
+        console.log('✅ Email sent successfully!');
+        console.log('📧 Message ID:', data.id);
         return { success: true, messageId: data.id };
         
     } catch (error) {
-        console.error('❌ Resend email error:', error);
+        console.error('❌ Email error:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Generate magic link token
-function generateMagicToken() {
-    return crypto.randomBytes(32).toString('hex');
-}
-
-// Route: Serve the main page
+// Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Route: Send magic link
 app.post('/send-magic-link', async (req, res) => {
     const { email } = req.body;
     
     if (!email || !email.includes('@')) {
         return res.status(400).json({ 
             success: false, 
-            error: 'Valid email address is required' 
+            error: 'Valid email required' 
         });
     }
 
     try {
-        // Generate magic token
-        const magicToken = generateMagicToken();
-        const expiresAt = Date.now() + (15 * 60 * 1000); // 15 minutes
-        
-        // Create magic link URL
+        const magicToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = Date.now() + (15 * 60 * 1000);
         const magicLink = `${req.protocol}://${req.get('host')}/verify-magic-link?token=${magicToken}&email=${encodeURIComponent(email)}`;
         
         console.log('🔗 Generated magic link for:', email);
-        console.log('🎫 Token:', magicToken);
-        console.log('⏰ Expires at:', new Date(expiresAt).toISOString());
         
-        // Store in database
         db.run(
             `INSERT OR REPLACE INTO magic_links (email, token, expires_at) VALUES (?, ?, ?)`,
             [email, magicToken, expiresAt],
             async function(err) {
                 if (err) {
                     console.error('Database error:', err);
-                    return res.status(500).json({ 
-                        success: false, 
-                        error: 'Database error' 
-                    });
+                    return res.status(500).json({ success: false, error: 'Database error' });
                 }
                 
-                // Send email
                 const emailResult = await sendMagicLinkEmail(email, magicLink);
                 
                 if (emailResult.success) {
                     res.json({ 
                         success: true, 
-                        message: 'Magic link sent successfully! Check your email.',
+                        message: 'Magic link sent! Check your email.',
                         messageId: emailResult.messageId 
                     });
                 } else {
@@ -230,15 +154,11 @@ app.post('/send-magic-link', async (req, res) => {
         );
         
     } catch (error) {
-        console.error('Error in /send-magic-link:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Internal server error' 
-        });
+        console.error('Error:', error);
+        res.status(500).json({ success: false, error: 'Server error' });
     }
 });
 
-// Route: Verify magic link
 app.get('/verify-magic-link', (req, res) => {
     const { token, email } = req.query;
     
@@ -246,7 +166,6 @@ app.get('/verify-magic-link', (req, res) => {
         return res.status(400).send('Invalid magic link');
     }
     
-    // Check token in database
     db.get(
         `SELECT * FROM magic_links WHERE token = ? AND email = ? AND used = 0`,
         [token, email],
@@ -260,41 +179,25 @@ app.get('/verify-magic-link', (req, res) => {
                 return res.status(400).send('Invalid or expired magic link');
             }
             
-            // Check if expired
             if (Date.now() > row.expires_at) {
                 return res.status(400).send('Magic link has expired');
             }
             
-            // Mark as used
-            db.run(
-                `UPDATE magic_links SET used = 1 WHERE id = ?`,
-                [row.id],
-                (err) => {
-                    if (err) {
-                        console.error('Error marking token as used:', err);
-                    }
-                }
-            );
+            db.run(`UPDATE magic_links SET used = 1 WHERE id = ?`, [row.id]);
             
-            // Create session
             req.session.user = { email: email };
             req.session.authenticated = true;
             
             console.log('✅ Magic link verified for:', email);
             
-            // Redirect to dashboard or send success response
             res.send(`
                 <html>
                 <head><title>Login Successful</title></head>
                 <body style="font-family: system-ui, sans-serif; text-align: center; padding: 50px;">
                     <h1 style="color: #10b981;">✅ Login Successful!</h1>
-                    <p>Welcome to IoT Systems Quantum Dashboard</p>
+                    <p>Welcome to IoT Systems Quantum</p>
                     <p>Email: ${email}</p>
-                    <script>
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 2000);
-                    </script>
+                    <script>setTimeout(() => window.location.href = '/dashboard', 2000);</script>
                 </body>
                 </html>
             `);
@@ -302,7 +205,6 @@ app.get('/verify-magic-link', (req, res) => {
     );
 });
 
-// Route: Dashboard (protected)
 app.get('/dashboard', (req, res) => {
     if (!req.session.authenticated) {
         return res.redirect('/');
@@ -312,24 +214,30 @@ app.get('/dashboard', (req, res) => {
         <html>
         <head><title>IoT Dashboard</title></head>
         <body style="font-family: system-ui, sans-serif; padding: 20px;">
-            <h1>🚀 LOT Systems Quantum Dashboard</h1>
+            <h1>🚀 IoT Systems Quantum Dashboard</h1>
             <p>Welcome, ${req.session.user.email}!</p>
-            <p>You are successfully logged in.</p>
+            <p>Successfully logged in!</p>
             <a href="/logout">Logout</a>
         </body>
         </html>
     `);
 });
 
-// Route: Logout
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/');
 });
 
-// Start server
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        timestamp: new Date().toISOString(),
+        resend: !!process.env.RESEND_API_KEY
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🌐 Access your app at: http://localhost:${PORT}`);
-    console.log(`📧 Using Resend for email delivery`);
+    console.log(`🌐 Visit: http://localhost:${PORT}`);
 });

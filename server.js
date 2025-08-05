@@ -52,15 +52,19 @@ console.log('Users table created or already exists.');
 
 // Email transporter configuration
 const transporter = nodemailer.createTransporter({
-service: 'gmail',
-auth: {
-user: 'lot.systems.quantum@gmail.com',
-pass: process.env.keiarhaqoezamefb // Your Gmail app password
-},
-pool: true,
-maxConnections: 5,
-maxMessages: 100,
-rateLimit: 14 // emails per second max
+  service: 'gmail',
+  auth: {
+    user: 'iot.systems.quantum@gmail.com',
+    pass: process.env.keiarhaqoezamefb // Use App Password here
+  },
+  pool: true,
+  maxConnections: 5,
+  maxMessages: 100,
+  rateLimit: 14,
+  // Add these for better connection handling:
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 30000,   // 30 seconds
+  socketTimeout: 60000      // 60 seconds
 });
 
 // Verify email configuration

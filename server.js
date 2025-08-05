@@ -1,3 +1,4 @@
+cat > server.js << 'EOF'
 require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
@@ -228,7 +229,6 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-// Health check
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'OK', 
@@ -241,3 +241,4 @@ app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌐 Visit: http://localhost:${PORT}`);
 });
+EOF

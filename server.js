@@ -112,13 +112,25 @@ app.get('/', (req, res) => {
 });
 
 app.post('/send-magic-link', async (req, res) => {
-    const { email } = req.body;
+  try {
+    // your existing email sending code here
+    const result = await sendEmailWithResend(req.body.email);
     
-    if (!email || !email.includes('@')) {
-        return res.status(400).json({ 
-            success: false, 
-            error: 'Valid email required' 
-        });
+    // ✅ Return JSON instead of HTML
+    res.json({ 
+      success: true, 
+      message: 'Magic link sent!',
+      id: result.id 
+    });
+    
+  } catch (error) {
+    // ✅ Also return JSON for errors
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to send email' 
+    });
+  }
+});
     }
 
     try {

@@ -129,8 +129,7 @@ app.post('/send-magic-link', async (req, res) => {
       success: false, 
       error: 'Failed to send email' 
     });
-  }
-});
+
     }
 
     try {

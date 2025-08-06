@@ -117,12 +117,11 @@ app.post('/send-magic-link', async (req, res) => {
     const result = await sendEmailWithResend(req.body.email);
     
     // ✅ Return JSON instead of HTML
-    res.json({ 
-      success: true, 
-      message: 'Magic link sent!',
-      id: result.id 
-    });
-    
+    res.json({
+    success: true,
+    message: 'Magic link sent!',
+    id: result.id
+});
   } catch (error) {
     // ✅ Also return JSON for errors
     res.status(500).json({ 

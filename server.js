@@ -7,8 +7,30 @@ const session = require('express-session');
 const path = require('path');
 const { Resend } = require('resend');
 
+const jwt = require(‘jsonwebtoken’);
+const axios = require(‘axios’);
+const JWT_SECRET = process.env.JWT_SECRET || ‘vbglDygJEu7dizNTO2YLfMxXWyD5rRCbSHaH8U453nE=’;
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+function initializeProfileTables(db) {
+function authenticateToken(req, res, next) {
+const authHeader = req.headers[‘authorization’];
+const token = authHeader && authHeader.split(’ ’)[1];
+
+if (!token) {
+return res.status(401).json({ error: ‘Access token required’ });
+}
+
+jwt.verify(token, JWT_SECRET, (err, user) => {
+if (err) {
+return res.status(403).json({ error: ‘Invalid token’ });
+}
+req.user = user;
+next();
+});
+}
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -170,6 +192,9 @@ app.post('/send-magic-link', async (req, res) => {
     }
 });
 
+
+
+
 app.get('/verify-magic-link', (req, res) => {
     const { token, email } = req.query;
     
@@ -270,6 +295,16 @@ function initializeProfileTables(db) {
     FOREIGN KEY (user_id) REFERENCES users (id)
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS personal_notes ( id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users (id) )`);
+
+// Update users table to include new columns (ignore errors if columns exist)
+db.run(`ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0`, () => {});
+db.run(`ALTER TABLE users ADD COLUMN last_login DATETIME`, () => {});
+db.run(`ALTER TABLE users ADD COLUMN location TEXT DEFAULT 'California'`, () => {});
+db.run(`ALTER TABLE users ADD COLUMN name TEXT`, () => {});
+}
+
+
   // Update users table to include login tracking
   db.run(`ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0`);
   db.run(`ALTER TABLE users ADD COLUMN last_login DATETIME`);
@@ -278,43 +313,95 @@ function initializeProfileTables(db) {
 
 // API Endpoints
 
-// Get user profile data
-app.get('/api/user/profile', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  
-  db.get(`
-    SELECT id, email, name, login_count, last_login, location, created_at 
-    FROM users WHERE id = ?
-  `, [userId], (err, user) => {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+// Your existing token verification logic here…
+// After successful verification:
 
-    // Get total user count
-    db.get('SELECT COUNT(*) as total FROM users', (err, countResult) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+db.get(‘SELECT * FROM users WHERE email = ?’, [email], (err, user) => {
+if (err || !user) {
+return res.status(400).send(‘Invalid verification’);
+}
 
-      res.json({
-        user: {
-          name: user.name || 'User',
-          email: user.email,
-          loginCount: user.login_count || 0,
-          lastLogin: user.last_login,
-          location: user.location || 'California'
-        },
-        stats: {
-          totalUsers: countResult.total
-        }
-      });
-    });
+```
+// Update login count and last login
+db.run(`
+  UPDATE users 
+  SET login_count = COALESCE(login_count, 0) + 1, 
+      last_login = CURRENT_TIMESTAMP,
+      name = COALESCE(name, ?)
+  WHERE email = ?
+`, [user.email.split('@')[0], email]);
+
+// Generate JWT token
+const jwtToken = jwt.sign(
+  { 
+    id: user.id, 
+    email: user.email,
+    name: user.name || user.email.split('@')[0]
+  },
+  JWT_SECRET,
+  { expiresIn: '24h' }
+);
+
+// Send HTML that stores token and redirects
+res.send(`
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>Login Successful</title>
+  </head>
+  <body>
+    <script>
+      localStorage.setItem('authToken', '${jwtToken}');
+      window.location.href = '/profile.html';
+    </script>
+    <p>Redirecting to your profile...</p>
+  </body>
+  </html>
+`);
+```
+
+});
+});
+
+
+
+
+// Get user profile data v.2
+app.get(’/api/user/profile’, authenticateToken, (req, res) => {
+const userId = req.user.id;
+
+db.get(`SELECT id, email, name, login_count, last_login, location, created_at  FROM users WHERE id = ?`, [userId], (err, user) => {
+if (err) {
+return res.status(500).json({ error: ‘Database error’ });
+}
+
+```
+if (!user) {
+  return res.status(404).json({ error: 'User not found' });
+}
+
+// Get total user count
+db.get('SELECT COUNT(*) as total FROM users', (err, countResult) => {
+  if (err) {
+    return res.status(500).json({ error: 'Database error' });
+  }
+
+  res.json({
+    user: {
+      name: user.name || user.email.split('@')[0] || 'User',
+      email: user.email,
+      loginCount: user.login_count || 0,
+      lastLogin: user.last_login,
+      location: user.location || 'California'
+    },
+    stats: {
+      totalUsers: countResult.total
+    }
   });
 });
+
+app.get(’/verify’, (req, res) => {
+const { token, email } = req.query;
 
 // Get user's personal notes
 app.get('/api/user/notes', authenticateToken, (req, res) => {
@@ -335,31 +422,31 @@ app.get('/api/user/notes', authenticateToken, (req, res) => {
 });
 
 // Create new personal note
-app.post('/api/user/notes', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  const { content } = req.body;
-  
-  if (!content || content.trim().length === 0) {
-    return res.status(400).json({ error: 'Content is required' });
-  }
+app.post(’/api/user/notes’, authenticateToken, (req, res) => {
+const userId = req.user.id;
+const { content } = req.body;
 
-  db.run(`
-    INSERT INTO personal_notes (user_id, content) 
-    VALUES (?, ?)
-  `, [userId, content.trim()], function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
+if (!content || content.trim().length === 0) {
+return res.status(400).json({ error: ‘Content is required’ });
+}
+
+db.run(`INSERT INTO personal_notes (user_id, content)  VALUES (?, ?)`, [userId, content.trim()], function(err) {
+if (err) {
+return res.status(500).json({ error: ‘Database error’ });
+}
     
-    // Return the created note
-    db.get(`
-      SELECT id, content, created_at, updated_at 
-      FROM personal_notes 
-      WHERE id = ?
-    `, [this.lastID], (err, note) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+ // Return the created note
+db.get(`
+  SELECT id, content, created_at, updated_at 
+  FROM personal_notes 
+  WHERE id = ?
+`, [this.lastID], (err, note) => {
+  if (err) {
+    return res.status(500).json({ error: 'Database error' });
+  }
+  
+  res.status(201).json({ note });
+});
       
       res.status(201).json({ note });
     });
@@ -393,27 +480,32 @@ app.put('/api/user/notes/:id', authenticateToken, (req, res) => {
   });
 });
 
-// Delete personal note
-app.delete('/api/user/notes/:id', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  const noteId = req.params.id;
 
-  db.run(`
-    DELETE FROM personal_notes 
-    WHERE id = ? AND user_id = ?
-  `, [noteId, userId], function(err) {
-    if (err) {
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Note not found' });
-    }
-    
-    res.json({ message: 'Note deleted successfully' });
-  });
+
+
+
+// Delete personal note
+app.delete(’/api/user/notes/:id’, authenticateToken, (req, res) => {
+const userId = req.user.id;
+const noteId = req.params.id;
+
+db.run(`DELETE FROM personal_notes  WHERE id = ? AND user_id = ?`, [noteId, userId], function(err) {
+if (err) {
+return res.status(500).json({ error: ‘Database error’ });
+}
+
+```
+if (this.changes === 0) {
+  return res.status(404).json({ error: 'Note not found' });
+}
+
+res.json({ message: 'Note deleted successfully' });
+```
+
+});
 });
 
+res.json({ message: 'Note deleted successfully' });
 // Get current weather (using OpenWeatherMap API)
 app.get('/api/weather/current', authenticateToken, async (req, res) => {
   try {
@@ -499,4 +591,7 @@ function authenticateToken(req, res, next) {
 
 // Initialize tables when server starts
 const db = new sqlite3.Database('users.db');
+initializeProfileTables(db);
+
+const db = new sqlite3.Database(‘users.db’);
 initializeProfileTables(db);

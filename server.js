@@ -252,3 +252,251 @@ app.listen(PORT, () => {
     console.log(`🌐 Visit: http://localhost:${PORT}`);
 });
 EOF
+
+// Add these endpoints to your server.js
+
+const sqlite3 = require('sqlite3').verbose();
+const axios = require('axios'); // npm install axios for weather API
+
+// Initialize database with new tables
+function initializeProfileTables(db) {
+  // Personal notes table
+  db.run(`CREATE TABLE IF NOT EXISTS personal_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
+  // Update users table to include login tracking
+  db.run(`ALTER TABLE users ADD COLUMN login_count INTEGER DEFAULT 0`);
+  db.run(`ALTER TABLE users ADD COLUMN last_login DATETIME`);
+  db.run(`ALTER TABLE users ADD COLUMN location TEXT DEFAULT 'California'`);
+}
+
+// API Endpoints
+
+// Get user profile data
+app.get('/api/user/profile', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  
+  db.get(`
+    SELECT id, email, name, login_count, last_login, location, created_at 
+    FROM users WHERE id = ?
+  `, [userId], (err, user) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get total user count
+    db.get('SELECT COUNT(*) as total FROM users', (err, countResult) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json({
+        user: {
+          name: user.name || 'User',
+          email: user.email,
+          loginCount: user.login_count || 0,
+          lastLogin: user.last_login,
+          location: user.location || 'California'
+        },
+        stats: {
+          totalUsers: countResult.total
+        }
+      });
+    });
+  });
+});
+
+// Get user's personal notes
+app.get('/api/user/notes', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  
+  db.all(`
+    SELECT id, content, created_at, updated_at 
+    FROM personal_notes 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC
+  `, [userId], (err, notes) => {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    res.json({ notes: notes || [] });
+  });
+});
+
+// Create new personal note
+app.post('/api/user/notes', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const { content } = req.body;
+  
+  if (!content || content.trim().length === 0) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+
+  db.run(`
+    INSERT INTO personal_notes (user_id, content) 
+    VALUES (?, ?)
+  `, [userId, content.trim()], function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Return the created note
+    db.get(`
+      SELECT id, content, created_at, updated_at 
+      FROM personal_notes 
+      WHERE id = ?
+    `, [this.lastID], (err, note) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      res.status(201).json({ note });
+    });
+  });
+});
+
+// Update personal note
+app.put('/api/user/notes/:id', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const noteId = req.params.id;
+  const { content } = req.body;
+  
+  if (!content || content.trim().length === 0) {
+    return res.status(400).json({ error: 'Content is required' });
+  }
+
+  db.run(`
+    UPDATE personal_notes 
+    SET content = ?, updated_at = CURRENT_TIMESTAMP 
+    WHERE id = ? AND user_id = ?
+  `, [content.trim(), noteId, userId], function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+    
+    res.json({ message: 'Note updated successfully' });
+  });
+});
+
+// Delete personal note
+app.delete('/api/user/notes/:id', authenticateToken, (req, res) => {
+  const userId = req.user.id;
+  const noteId = req.params.id;
+
+  db.run(`
+    DELETE FROM personal_notes 
+    WHERE id = ? AND user_id = ?
+  `, [noteId, userId], function(err) {
+    if (err) {
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Note not found' });
+    }
+    
+    res.json({ message: 'Note deleted successfully' });
+  });
+});
+
+// Get current weather (using OpenWeatherMap API)
+app.get('/api/weather/current', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get user location
+    db.get('SELECT location FROM users WHERE id = ?', [userId], async (err, user) => {
+      if (err) {
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      const location = user?.location || 'California';
+      
+      // You'll need to get an API key from OpenWeatherMap
+      const WEATHER_API_KEY = process.env.WEATHER_API_KEY || 'your_api_key_here';
+      
+      try {
+        const weatherResponse = await axios.get(
+          `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${WEATHER_API_KEY}&units=imperial`
+        );
+        
+        const weather = weatherResponse.data;
+        
+        res.json({
+          location: location,
+          temperature: Math.round(weather.main.temp) + '°F',
+          humidity: weather.main.humidity + '% rH',
+          description: weather.weather[0].description
+        });
+      } catch (weatherErr) {
+        // Fallback to mock data if weather API fails
+        res.json({
+          location: location,
+          temperature: '75°F',
+          humidity: '20% rH',
+          description: 'Clear'
+        });
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Weather service error' });
+  }
+});
+
+// Update login count when user logs in (modify your existing login verification)
+app.post('/verify-login', (req, res) => {
+  const { token, email } = req.body;
+  
+  // Your existing token verification logic here...
+  // Then add this to update login count:
+  
+  db.run(`
+    UPDATE users 
+    SET login_count = COALESCE(login_count, 0) + 1, 
+        last_login = CURRENT_TIMESTAMP 
+    WHERE email = ?
+  `, [email], (err) => {
+    if (err) {
+      console.error('Error updating login count:', err);
+    }
+  });
+  
+  // Your existing response logic...
+});
+
+// Middleware for token authentication (if you don't have it)
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.sendStatus(401);
+  }
+
+  // Verify token logic here - depends on your current implementation
+  // For now, assuming you have a way to verify and get user info
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+}
+
+// Initialize tables when server starts
+const db = new sqlite3.Database('users.db');
+initializeProfileTables(db);

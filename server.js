@@ -1,6 +1,6 @@
 // package.json
 {
-“name”: “iout-systems-quantum”,
+“name”: “iot-systems-quantum”,
 “version”: “1.0.0”,
 “type”: “module”,
 “scripts”: {
